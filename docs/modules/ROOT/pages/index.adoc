@@ -1,0 +1,5 @@
+= Firefly III
+
+firefly-iii is a Commodore component to manage Firefly III.
+
+See the xref:references/parameters.adoc[parameters] reference for further details.

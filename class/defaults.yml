@@ -1,0 +1,4 @@
+parameters:
+  firefly_iii:
+    =_metadata: {}
+    namespace: syn-firefly-iii
