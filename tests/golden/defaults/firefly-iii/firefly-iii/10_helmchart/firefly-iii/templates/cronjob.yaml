@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: firefly-iii
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: firefly-iii
+    helm.sh/chart: firefly-iii-1.7.4
+  name: firefly-iii
+spec:
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: firefly-iii
+            app.kubernetes.io/name: firefly-iii
+        spec:
+          containers:
+            - args:
+                - --silent
+                - --show-error
+                - --fail
+                - http://firefly-iii/api/v1/cron/$(FIREFLY_III_TOKEN)
+              command:
+                - /usr/bin/curl
+              env:
+                - name: FIREFLY_III_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: APP_TOKEN
+                      name: firefly-iii
+              image: curlimages/curl:7.81.0
+              imagePullPolicy: IfNotPresent
+              name: firefly-iii
+          restartPolicy: OnFailure
+  schedule: 0 3 * * *
+  successfulJobsHistoryLimit: 3

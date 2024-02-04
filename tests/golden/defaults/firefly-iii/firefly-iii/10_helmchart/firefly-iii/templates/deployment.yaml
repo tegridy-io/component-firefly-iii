@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: firefly-iii
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: firefly-iii
+    helm.sh/chart: firefly-iii-1.7.4
+  name: firefly-iii
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: firefly-iii
+      app.kubernetes.io/name: firefly-iii
+  template:
+    metadata:
+      annotations:
+        checksum/config: 60b4f04d7adf5532d348c662a9789dc3893c40dab4dc8765ea7ac563ab3caaef
+      labels:
+        app.kubernetes.io/instance: firefly-iii
+        app.kubernetes.io/name: firefly-iii
+    spec:
+      containers:
+        - envFrom:
+            - secretRef:
+                name: firefly-iii-app-key
+            - configMapRef:
+                name: firefly-iii
+            - secretRef:
+                name: firefly-iii
+          image: fireflyiii/core:version-6.1.1
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          name: firefly-iii
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /var/www/html/storage/upload
+              name: upload
+      volumes:
+        - name: upload
+          persistentVolumeClaim:
+            claimName: firefly-iii

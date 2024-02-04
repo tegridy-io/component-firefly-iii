@@ -3,8 +3,8 @@ local inv = kap.inventory();
 local params = inv.parameters.firefly_iii;
 local argocd = import 'lib/argocd.libjsonnet';
 
-local app = argocd.App('firefly-iii', params.namespace);
+local app = argocd.App(inv.parameters._instance, params.namespace.name);
 
 {
-  'firefly-iii': app,
+  [inv.parameters._instance]: app,
 }

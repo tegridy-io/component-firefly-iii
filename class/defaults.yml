@@ -1,4 +1,141 @@
 parameters:
   firefly_iii:
-    =_metadata: {}
-    namespace: syn-firefly-iii
+    =_metadata:
+      multi_instance: true
+
+    =_config:
+      tls:
+        'True':
+          - secretName: firefly-tls
+            hosts:
+              - ${firefly_iii:config:ingress:url}
+        'False': []
+
+    namespace:
+      annotations: {}
+      labels: {}
+      name: app-${_instance}
+
+    charts:
+      firefly:
+        source: https://firefly-iii.github.io/kubernetes
+        version: 1.7.4
+      postgresql:
+        source: https://charts.bitnami.com/bitnami
+        version: 14.0.1
+
+    resources:
+      firefly: {}
+      postgresql:
+        requests:
+          cpu: 20m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+
+    config:
+      ingress:
+        enabled: true
+        tls: true
+        url: firefly.local
+        annotations: {}
+      persistence:
+        enabled: true
+        accessMode: ReadWriteOnce
+        storageClass: ''
+        size: 1Gi
+
+    secrets:
+      postgresql: ?{vaultkv:${cluster:tenant}/${cluster:name}/firefly/${_instance}/postgresql}
+      firefly: ?{vaultkv:${cluster:tenant}/${cluster:name}/firefly/${_instance}/firefly}
+      fireflyKey: ?{vaultkv:${cluster:tenant}/${cluster:name}/firefly/${_instance}/appkey}
+      token: ?{vaultkv:${cluster:tenant}/${cluster:name}/firefly/${_instance}/token}
+
+    database:
+      mode: standalone
+      persistence:
+        enabled: true
+        accessMode: ReadWriteOnce
+        storageClass: ''
+        size: 5Gi
+
+    helmValues:
+      ##
+      ## Helm values for postgresql
+      ##
+      postgresql:
+        architecture: ${firefly_iii:database:mode}
+        auth:
+          enablePostgresUser: false
+          username: firefly
+          database: firefly
+          existingSecret: postgresql
+          secretKeys:
+            adminPasswordKey: postgres-password
+            userPasswordKey: postgres-password
+            replicationPasswordKey: replication-password
+        commonLabels:
+          app.kubernetes.io/managed-by: commodore
+        primary:
+          resources: ${firefly_iii:resources:postgresql}
+          podAntiAffinityPreset: soft
+          podAnnotations:
+            k8up.io/backupcommand: sh -c 'PGDATABASE="$POSTGRES_DATABASE" PGUSER="$POSTGRES_USER" PGPASSWORD="$POSTGRES_PASSWORD" pg_dump --clean'
+            k8up.io/file-extension: .sql
+          persistence:
+            enabled: ${firefly_iii:database:persistence:enabled}
+            accessMode: ${firefly_iii:database:persistence:accessMode}
+            storageClass: ${firefly_iii:database:persistence:storageClass}
+            size: ${firefly_iii:database:persistence:size}
+            annotations:
+              k8up.io/backup: 'false'
+          networkPolicy:
+            enabled: false
+        readReplicas:
+          persistence:
+            annotations:
+              k8up.io/backup: 'false'
+          networkPolicy:
+            enabled: false
+        tls:
+          enabled: false
+        serviceAccount:
+          create: false
+      ##
+      ## Helm values for firefly-iii
+      ##
+      firefly:
+        persistence:
+          enabled: ${firefly_iii:config:persistence:enabled}
+          storageClassName: ${firefly_iii:config:persistence:storageClass}
+          accessModes: ${firefly_iii:config:persistence:accessMode}
+          storage: ${firefly_iii:config:persistence:size}
+        secrets:
+          appKey: Au7chaek7kohgh8biePh7eNgouquohJe
+        cronjob:
+          enabled: true
+          auth:
+            existingSecret: firefly-iii
+            secretKey: APP_TOKEN
+        ingress:
+          enabled: ${firefly_iii:config:ingress:enabled}
+          annotations: ${firefly_iii:config:ingress:annotations}
+          labels:
+            app.kubernetes.io/managed-by: commodore
+          hosts:
+            - ${firefly_iii:config:ingress:url}
+          tls: ${firefly_iii:_config:tls:${firefly_iii:config:ingress:tls}}
+        config:
+          existingSecret: firefly-iii
+          env:
+            DB_HOST: postgresql
+            DB_CONNECTION: pgsql
+            DB_PORT: '5432'
+            DB_DATABASE: firefly
+            DB_USERNAME: firefly
+            DEFAULT_LANGUAGE: "de"
+            DEFAULT_LOCALE: "de_CH"
+            TZ: "Europe/Zurich"
+            TRUSTED_PROXIES: "**" # 10.128.0.0/14
+        resources: ${firefly_iii:resources:firefly}

@@ -1,6 +1,21 @@
 parameters:
   kapitan:
+    dependencies:
+      - type: helm
+        source: ${firefly_iii:charts:postgresql:source}
+        chart_name: postgresql
+        version: ${firefly_iii:charts:postgresql:version}
+        output_path: ${_base_directory}/helmcharts/postgresql/${firefly_iii:charts:postgresql:version}/
+      - type: helm
+        source: ${firefly_iii:charts:firefly:source}
+        chart_name: firefly-iii
+        version: ${firefly_iii:charts:firefly:version}
+        output_path: ${_base_directory}/helmcharts/firefly_iii/${firefly_iii:charts:firefly:version}/
     compile:
+      - input_paths:
+          - ${_base_directory}/helmcharts/firefly_iii/${firefly_iii:charts:firefly:version}/templates/secret-app-key.yaml
+        input_type: remove
+        output_path: .
       - input_paths:
           - ${_base_directory}/component/app.jsonnet
         input_type: jsonnet
@@ -8,4 +23,22 @@ parameters:
       - input_paths:
           - ${_base_directory}/component/main.jsonnet
         input_type: jsonnet
-        output_path: firefly-iii/
+        output_path: ${_instance}/
+      - input_paths:
+          - ${_base_directory}/helmcharts/postgresql/${firefly_iii:charts:postgresql:version}
+        input_type: helm
+        output_path: ${_instance}//10_helmchart/
+        helm_values: ${firefly_iii:helmValues:postgresql}
+        helm_params:
+          name: postgresql
+          namespace: ${firefly_iii:namespace:name}
+          dependency_update: false
+      - input_paths:
+          - ${_base_directory}/helmcharts/firefly_iii/${firefly_iii:charts:firefly:version}
+        input_type: helm
+        output_path: ${_instance}//10_helmchart/
+        helm_values: ${firefly_iii:helmValues:firefly}
+        helm_params:
+          name: firefly-iii
+          namespace: ${firefly_iii:namespace:name}
+          dependency_update: false
