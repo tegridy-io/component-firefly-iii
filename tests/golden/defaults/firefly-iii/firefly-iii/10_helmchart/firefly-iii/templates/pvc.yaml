@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/instance: firefly-iii
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: firefly-iii
+    helm.sh/chart: firefly-iii-1.7.4
+  name: firefly-iii
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
